@@ -180,6 +180,7 @@ class Qwen2VLRotaryEmbedding(nn.Module):
         device_type = x.device.type
         device_type = device_type if isinstance(device_type, str) and device_type != "mps" else "cpu"
         with torch.autocast(device_type=device_type, enabled=False):
+            inv_freq_expanded=inv_freq_expanded.to(position_ids_expanded.device)
             freqs = (inv_freq_expanded.float() @ position_ids_expanded.float()).transpose(2, 3)
             emb = torch.cat((freqs, freqs), dim=-1)
             cos = emb.cos()
@@ -247,6 +248,7 @@ def apply_multimodal_rotary_pos_emb(q, k, cos, sin, mrope_section, unsqueeze_dim
 
 def apply_rotary_pos_emb_vision(tensor: torch.Tensor, freqs: torch.Tensor) -> torch.Tensor:
     orig_dtype = tensor.dtype
+    #freqs=freqs.to(tensor.device)
     tensor = tensor.float()
     cos = freqs.cos()
     sin = freqs.sin()
@@ -1034,6 +1036,7 @@ class Qwen2VisionTransformerPretrainedModel(Qwen2VLPreTrainedModel):
         max_grid_size = grid_thw[:, 1:].max()
         rotary_pos_emb_full = self.rotary_pos_emb(max_grid_size)
         rotary_pos_emb = rotary_pos_emb_full[pos_ids].flatten(1)
+        #rotary_pos_emb=rotary_pos_emb.to(grid_thw.device)
         return rotary_pos_emb
 
     def forward(self, hidden_states: torch.Tensor, grid_thw: torch.Tensor) -> torch.Tensor:
